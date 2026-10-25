@@ -8,6 +8,7 @@ scrape_configs:
 
   - job_name: grafana
     # Grafana serves HTTPS; comment out these four lines if you switch it to HTTP.
+    # server_name must be the hostname in Grafana's certificate.
     scheme: https
     tls_config:
       ca_file: /etc/prometheus/ca.crt
@@ -20,14 +21,17 @@ scrape_configs:
       - targets: ["blackbox:9115"]
 
   # Each probe job sends its targets to the exporter as ?target=...
+  # The targets below are examples: replace them with your own sites and devices.
+
+  # Websites: up or down, response time, and certificate expiry for https://
   - job_name: blackbox_http
     metrics_path: /probe
     params:
       module: [http_2xx]
     static_configs:
       - targets:
-          - https://www.houseoflogic.co.uk
-          - https://grafana.com
+          - https://example.com
+          - https://prometheus.io
     relabel_configs: &blackbox_relabel
       - source_labels: [__address__]
         target_label: __param_target
@@ -36,18 +40,20 @@ scrape_configs:
       - target_label: __address__
         replacement: blackbox:9115
 
+  # Ping: your router and other devices
   - job_name: blackbox_icmp
     metrics_path: /probe
     params:
       module: [icmp]
     static_configs:
-      - targets: ["192.168.5.1", "192.168.5.224"]
+      - targets: ["192.168.1.1", "1.1.1.1"]
     relabel_configs: *blackbox_relabel
 
+  # TCP port open: host:port, e.g. SSH, or a Proxmox web UI on 8006
   - job_name: blackbox_tcp
     metrics_path: /probe
     params:
       module: [tcp_connect]
     static_configs:
-      - targets: ["192.168.5.224:8006"]
+      - targets: ["192.168.1.10:22"]
     relabel_configs: *blackbox_relabel

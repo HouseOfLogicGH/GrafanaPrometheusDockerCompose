@@ -1,5 +1,7 @@
 .env
 *.pre-*
+local/
+docker-compose.override.yml
 certs/*.crt
 certs/*.key
 certs/*.srl

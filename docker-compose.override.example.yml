@@ -1,0 +1,14 @@
+# Keep your own settings out of the files git tracks, so git pull never conflicts:
+#   mkdir -p local && cp prometheus.yml local/ && cp docker-compose.override.example.yml docker-compose.override.yml
+# Edit local/prometheus.yml. Docker Compose reads docker-compose.override.yml
+# automatically and mounts your copy in place of the repo's.
+# local/ and docker-compose.override.yml are in .gitignore.
+services:
+  prometheus:
+    volumes:
+      - ./local/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  # Uncomment if you change blackbox.yml too (cp blackbox.yml local/ first).
+  # blackbox:
+  #   volumes:
+  #     - ./local/blackbox.yml:/etc/blackbox/blackbox.yml:ro

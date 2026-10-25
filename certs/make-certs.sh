@@ -1,13 +1,16 @@
 #!/bin/sh
 # Creates a lab CA (once) and a certificate for Grafana, in this folder.
-# Usage: sh make-certs.sh [hostname] [ip] [network]
-#   e.g. sh make-certs.sh grafana.lan 192.168.5.227 192.168.5.0/255.255.255.0
+# Usage: sh make-certs.sh hostname [ip] [network]
+#   e.g. sh make-certs.sh grafana.lan 192.168.1.50 192.168.1.0/255.255.255.0
+#   Leave out the IP if the host gets its address from DHCP: sh make-certs.sh grafana.lan
+# The network only matters the first time, when the CA is created.
 # Re-run to renew the Grafana certificate; the CA is kept.
 set -e
-NAME=${1:-grafana.lan}
-IP=${2:-192.168.5.227}
-NET=${3:-192.168.5.0/255.255.255.0}
+NAME=${1:?usage: sh make-certs.sh hostname [ip] [network]}
+IP=$2
+NET=${3:-192.168.1.0/255.255.255.0}
 DOMAIN=${NAME#*.}
+SAN="DNS:$NAME${IP:+,IP:$IP}"
 cd "$(dirname "$0")"
 
 if [ ! -f ca.key ]; then
@@ -22,7 +25,7 @@ if [ ! -f ca.key ]; then
 fi
 
 openssl req -new -newkey rsa:2048 -nodes -keyout grafana.key -out grafana.csr -subj "/CN=$NAME"
-printf '%s\n' "subjectAltName=DNS:$NAME,IP:$IP" \
+printf '%s\n' "subjectAltName=$SAN" \
   "extendedKeyUsage=serverAuth" "keyUsage=critical,digitalSignature,keyEncipherment" > grafana.ext
 openssl x509 -req -in grafana.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
   -days 825 -sha256 -extfile grafana.ext -out grafana.crt
