@@ -7,3 +7,4 @@ certs/*.key
 certs/*.srl
 certs/*.csr
 certs/*.ext
+provisioning/datasources/azure-monitor.yaml

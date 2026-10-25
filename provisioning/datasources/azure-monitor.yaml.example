@@ -1,0 +1,17 @@
+# Azure Monitor data source, signed in with the service principal from .env (AZ_*).
+# To use it: set the AZ_* values in .env, then
+#   cp provisioning/datasources/azure-monitor.yaml.example provisioning/datasources/azure-monitor.yaml
+#   docker compose up -d && docker compose restart grafana
+apiVersion: 1
+datasources:
+  - name: Azure Monitor
+    type: grafana-azure-monitor-datasource
+    access: proxy
+    jsonData:
+      azureAuthType: clientsecret
+      cloudName: azuremonitor
+      tenantId: $AZ_TENANT
+      clientId: $AZ_CLIENT_ID
+      subscriptionId: $AZ_SUBSCRIPTION
+    secureJsonData:
+      clientSecret: $AZ_CLIENT_SECRET
