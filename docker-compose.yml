@@ -1,0 +1,44 @@
+services:
+  prometheus:
+    image: prom/prometheus:${PROMETHEUS_VERSION}
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=30d
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./certs/ca.crt:/etc/prometheus/ca.crt:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+
+  blackbox:
+    image: prom/blackbox-exporter:${BLACKBOX_VERSION}
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/blackbox/blackbox.yml
+    volumes:
+      - ./blackbox.yml:/etc/blackbox/blackbox.yml:ro
+    ports:
+      - "9115:9115"
+
+  grafana:
+    image: grafana/grafana:${GRAFANA_VERSION}
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./provisioning:/etc/grafana/provisioning
+      - ./certs/grafana.crt:/etc/grafana/certs/grafana.crt:ro
+      - ./certs/grafana.key:/etc/grafana/certs/grafana.key:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      # HTTPS (default): https://grafana.lan
+      - "443:3000"
+      # HTTP instead (see .env): http://grafana.lan:3000
+      # - "3000:3000"
+    depends_on:
+      - prometheus
+
+volumes:
+  prometheus-data:
+  grafana-data:

@@ -1,0 +1,53 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: grafana
+    # Grafana serves HTTPS; comment out these four lines if you switch it to HTTP.
+    scheme: https
+    tls_config:
+      ca_file: /etc/prometheus/ca.crt
+      server_name: grafana.lan
+    static_configs:
+      - targets: ["grafana:3000"]
+
+  - job_name: blackbox_exporter
+    static_configs:
+      - targets: ["blackbox:9115"]
+
+  # Each probe job sends its targets to the exporter as ?target=...
+  - job_name: blackbox_http
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - https://www.houseoflogic.co.uk
+          - https://grafana.com
+    relabel_configs: &blackbox_relabel
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox:9115
+
+  - job_name: blackbox_icmp
+    metrics_path: /probe
+    params:
+      module: [icmp]
+    static_configs:
+      - targets: ["192.168.5.1", "192.168.5.224"]
+    relabel_configs: *blackbox_relabel
+
+  - job_name: blackbox_tcp
+    metrics_path: /probe
+    params:
+      module: [tcp_connect]
+    static_configs:
+      - targets: ["192.168.5.224:8006"]
+    relabel_configs: *blackbox_relabel
