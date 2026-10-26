@@ -45,6 +45,7 @@ After a pull, compare the repo's `prometheus.yml` with yours (`diff prometheus.y
 ## Configuration
 
 - **`.env`**: image versions and Grafana settings. Email (SMTP), Azure, Entra ID login and AWS sections are commented out, with notes on where each value comes from. Never commit `.env`.
+- **Entra ID login**: see [docs/entra-id.md](docs/entra-id.md).
 - **HTTP instead of HTTPS**: follow the note in `.env`, then swap the port lines in `docker-compose.yml` and comment out the HTTPS lines in the `grafana` job in `local/prometheus.yml`.
 - **After editing `local/prometheus.yml` or `blackbox.yml`**: `docker compose restart prometheus` (or `blackbox`). `docker compose up -d` only recreates a container when its service definition changes.
 - **Upgrading**: change the version in `.env`, then `docker compose pull && docker compose up -d`.
