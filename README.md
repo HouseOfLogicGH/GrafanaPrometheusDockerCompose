@@ -30,6 +30,14 @@ Then:
    `Import-Certificate -FilePath ca.crt -CertStoreLocation Cert:\CurrentUser\Root`
 3. Open https://grafana.lan and sign in as `admin` / `admin`; Grafana asks for a new password.
 4. Replace the example targets in `local/prometheus.yml` (the `blackbox_*` jobs) with your own websites and devices, then `docker compose restart prometheus`.
+5. Optional, for Azure: fill in the `AZ_*` values in `.env`, then turn on the Azure Monitor data source. Grafana doesn't read the `AZ_*` variables itself; only this provisioning file does, and it ignores the `.example` copy:
+
+   ```bash
+   cp provisioning/datasources/azure-monitor.yaml.example provisioning/datasources/azure-monitor.yaml
+   docker compose up -d && docker compose restart grafana
+   ```
+
+   `up -d` loads the changed `.env`; the restart makes Grafana read the new provisioning file. Then check **Azure Monitor** with **Save & test**.
 
 ## Your settings and updates
 
