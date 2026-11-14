@@ -57,3 +57,72 @@ After a pull, compare the repo's `prometheus.yml` with yours (`diff prometheus.y
 - **HTTP instead of HTTPS**: follow the note in `.env`, then swap the port lines in `docker-compose.yml` and comment out the HTTPS lines in the `grafana` job in `local/prometheus.yml`.
 - **After editing `local/prometheus.yml` or `blackbox.yml`**: `docker compose restart prometheus` (or `blackbox`). `docker compose up -d` only recreates a container when its service definition changes.
 - **Upgrading**: change the version in `.env`, then `docker compose pull && docker compose up -d`.
+- **Without Docker Compose**: the same stack with plain `docker run` commands is in [docs/docker-run.md](docs/docker-run.md).
+
+## The videos
+
+Each House of Logic video built on this stack has a section here with the settings it needs. Every one starts from the [Setup](#setup) above. Settings go in `.env`; after changing `.env`, run `docker compose up -d` (a restart doesn't reread it).
+
+### Video: How to setup Grafana and Prometheus with Docker Compose
+
+Watch: https://youtu.be/1pjhhABDWtE
+
+The quick route to the stack on an unprivileged Proxmox LXC container.
+
+- **Container**: unprivileged, with `nesting=1` and `keyctl=1` (Options → Features in Proxmox). Without them Docker fails with permission errors; don't make the container privileged to fix that.
+- **Settings**: only the [Setup](#setup) steps. The other sections of `.env` stay commented out until their videos.
+- **Your targets**: edit `local/prometheus.yml`, not `prometheus.yml`, so `git pull` never clashes. Then `docker compose restart prometheus`.
+- **Ports**: 443 (Grafana), 9090 (Prometheus), 9115 (Blackbox exporter). For a second app on the same Docker host, give it its own folder and Compose file and choose ports that don't clash with these.
+
+### Azure service principal (for the Azure videos)
+
+Grafana reads Azure with a service principal: an identity with a secret and only the read access it needs. The Azure VMs video below uses one.
+
+```bash
+az login
+SUB=$(az account show --query id -o tsv)
+az ad sp create-for-rbac -n sp-hol-grafana --role "Monitoring Reader" \
+  --scopes /subscriptions/$SUB/resourceGroups/<resource-group>
+```
+
+Use the resource group that holds what you're monitoring. **Monitoring Reader** can read metrics and query Log Analytics, and can't change anything. Scoping it to one resource group means Grafana sees nothing else. To let it read another resource group too:
+
+```bash
+az role assignment create --assignee <appId> --role "Monitoring Reader" \
+  --scope /subscriptions/$SUB/resourceGroups/<other-resource-group>
+```
+
+Put the output in `.env` and uncomment the lines:
+
+| `create-for-rbac` output | `.env` |
+|---|---|
+| `tenant` | `AZ_TENANT` |
+| `appId` | `AZ_CLIENT_ID` |
+| `password` | `AZ_CLIENT_SECRET` |
+| `az account show --query id -o tsv` | `AZ_SUBSCRIPTION` |
+
+`GF_AUTH_AZURE_AUTH_ENABLED=true` must stay on. The secret expires after a year; get a new one with `az ad sp credential reset --id <appId>`, update `AZ_CLIENT_SECRET`, then `docker compose up -d`.
+
+### Video: How to Monitor Azure VMs with Grafana
+
+- **Identity**: the [Azure service principal](#azure-service-principal-for-the-azure-videos) with Monitoring Reader on the VMs' resource group.
+- **Data source**: step 5 of the [Setup](#setup): copy `provisioning/datasources/azure-monitor.yaml.example` to `azure-monitor.yaml`, then `docker compose up -d && docker compose restart grafana`, and **Save & test** on the Azure Monitor data source.
+- **Alert email**: fill in the email section of `.env`. For Gmail, `GF_SMTP_PASSWORD` is a 16-character app password (2-step verification on), not your Gmail password. Then `docker compose up -d`, and check it with **Test** on the email contact point (Alerting → Contact points).
+- **Memory**: VM memory isn't among the platform metrics. It needs the Azure Monitor Agent installed on the VM.
+
+### Video: Grafana Login with Microsoft Entra ID
+
+- **Identity**: a second app registration, separate from `sp-hol-grafana`. That one reads monitoring data; this one signs people in, with its own secret and redirect URI. Keeping them apart means a leaked login secret can't read Azure, and the other way round.
+- **HTTPS**: required (the stack's default). Entra only accepts `http://` redirects for `localhost`.
+- **Settings**: the Entra ID section of `.env`, then `docker compose up -d`. Full steps, app roles and fixes for common errors: [docs/entra-id.md](docs/entra-id.md).
+
+To create the app registration from the command line instead of the portal:
+
+```bash
+az ad app create --display-name grafana-app --sign-in-audience AzureADMyOrg \
+  --web-redirect-uris https://grafana.lan/login/azuread
+az ad sp create --id <appId>     # the Enterprise application, where users get their roles
+az ad app credential reset --id <appId> --display-name grafana --years 1
+```
+
+`appId` goes in `GF_AUTH_AZUREAD_CLIENT_ID`, `password` in `GF_AUTH_AZUREAD_CLIENT_SECRET`, and `tenant` replaces `<tenant-id>` in the two URLs. Then create the Admin, Editor and Viewer app roles and assign users as in [docs/entra-id.md](docs/entra-id.md#3-app-roles).
