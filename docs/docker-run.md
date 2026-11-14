@@ -72,7 +72,7 @@ A restart doesn't reread `.env`: environment variables are fixed when a containe
 
 Everything else is the same as with Compose:
 
-- **Azure VMs**: create the [service principal](../README.md#azure-service-principal-for-the-azure-videos), fill in the `AZ_*` values and the email section in `.env`, and for the Azure Monitor data source:
+- **Azure VMs and Log Analytics**: create the [service principal](../README.md#azure-service-principal-for-the-azure-videos), fill in the `AZ_*` values and the email section in `.env`, and for the Azure Monitor data source:
 
   ```bash
   cp provisioning/datasources/azure-monitor.yaml.example provisioning/datasources/azure-monitor.yaml
