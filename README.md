@@ -105,6 +105,8 @@ Put the output in `.env` and uncomment the lines:
 
 ### Video: How to Monitor Azure VMs with Grafana
 
+Watch: https://youtu.be/GZHAg6P1k7Y
+
 - **Identity**: the [Azure service principal](#azure-service-principal-for-the-azure-videos) with Monitoring Reader on the VMs' resource group.
 - **Data source**: step 5 of the [Setup](#setup): copy `provisioning/datasources/azure-monitor.yaml.example` to `azure-monitor.yaml`, then `docker compose up -d && docker compose restart grafana`, and **Save & test** on the Azure Monitor data source.
 - **Alert email**: fill in the email section of `.env`. For Gmail, `GF_SMTP_PASSWORD` is a 16-character app password (2-step verification on), not your Gmail password. Then `docker compose up -d`, and check it with **Test** on the email contact point (Alerting → Contact points).
@@ -112,11 +114,50 @@ Put the output in `.env` and uncomment the lines:
 
 ### Video: Azure Log Analytics in Grafana
 
+Watch: https://youtu.be/bTuwTn7E7Ok
+
 - **Identity**: the same service principal. Monitoring Reader covers KQL queries on a Log Analytics workspace in its resource group. If the workspace is in another resource group, add a role assignment there.
 - **Data source**: the same Azure Monitor data source as the VMs video; Logs queries pick the workspace in the query editor.
 - **No rows at first**: new data takes a few minutes to reach the workspace, longer the first time a VM starts sending.
 
+#### Test data: scheduled sends
+
+If you want to test, you can use these commands to set up scheduled sends to log analytics. Each one writes a test event on a schedule; the Azure Monitor Agent picks it up through your data collection rule. The rule must collect the log they write to: **Syslog** facility `LOG_USER` at Warning or above on Linux, and the **Application** event log at Warning or above on Windows.
+
+Linux, a cron job that writes to syslog every minute (as root):
+
+```bash
+echo '* * * * * root logger -t hol-test -p user.warning "Log Analytics test event"' > /etc/cron.d/hol-loganalytics-test
+```
+
+Windows, a scheduled task that writes to the Application log every 5 minutes (PowerShell as Administrator):
+
+```powershell
+$action  = New-ScheduledTaskAction -Execute "eventcreate.exe" -Argument '/L APPLICATION /T WARNING /SO HoLTest /ID 100 /D "Log Analytics test event"'
+$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 5)
+Register-ScheduledTask -TaskName "HoL Log Analytics test" -Action $action -Trigger $trigger -User "NT AUTHORITY\SYSTEM" -RunLevel Highest
+```
+
+Find them in Log Analytics or a Grafana Logs query after a few minutes:
+
+```kusto
+Syslog | where SyslogMessage has "Log Analytics test event"
+Event | where Source == "HoLTest"
+```
+
+Remove them when you're done, so they don't keep adding to your ingestion:
+
+```bash
+rm /etc/cron.d/hol-loganalytics-test
+```
+
+```powershell
+Unregister-ScheduledTask -TaskName "HoL Log Analytics test" -Confirm:$false
+```
+
 ### Video: Grafana Login with Microsoft Entra ID
+
+Watch: https://youtu.be/o6p-aRDFzVg
 
 - **Identity**: a second app registration, separate from `sp-hol-grafana`. That one reads monitoring data; this one signs people in, with its own secret and redirect URI. Keeping them apart means a leaked login secret can't read Azure, and the other way round.
 - **HTTPS**: required (the stack's default). Entra only accepts `http://` redirects for `localhost`.
