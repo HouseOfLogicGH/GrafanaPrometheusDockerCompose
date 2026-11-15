@@ -76,7 +76,7 @@ The quick route to the stack on an unprivileged Proxmox LXC container.
 
 ### Azure service principal (for the Azure videos)
 
-Grafana reads Azure with a service principal: an identity with a secret and only the read access it needs. The Azure VMs video below uses one.
+Grafana reads Azure with a service principal: an identity with a secret and only the read access it needs. The Azure VMs and Log Analytics videos below use one.
 
 ```bash
 az login
@@ -108,7 +108,13 @@ Put the output in `.env` and uncomment the lines:
 - **Identity**: the [Azure service principal](#azure-service-principal-for-the-azure-videos) with Monitoring Reader on the VMs' resource group.
 - **Data source**: step 5 of the [Setup](#setup): copy `provisioning/datasources/azure-monitor.yaml.example` to `azure-monitor.yaml`, then `docker compose up -d && docker compose restart grafana`, and **Save & test** on the Azure Monitor data source.
 - **Alert email**: fill in the email section of `.env`. For Gmail, `GF_SMTP_PASSWORD` is a 16-character app password (2-step verification on), not your Gmail password. Then `docker compose up -d`, and check it with **Test** on the email contact point (Alerting → Contact points).
-- **Memory**: VM memory isn't among the platform metrics. It needs the Azure Monitor Agent installed on the VM.
+- **Memory**: VM memory isn't among the platform metrics. It needs the Azure Monitor Agent, which the [Log Analytics video](#video-azure-log-analytics-in-grafana) sets up.
+
+### Video: Azure Log Analytics in Grafana
+
+- **Identity**: the same service principal. Monitoring Reader covers KQL queries on a Log Analytics workspace in its resource group. If the workspace is in another resource group, add a role assignment there.
+- **Data source**: the same Azure Monitor data source as the VMs video; Logs queries pick the workspace in the query editor.
+- **No rows at first**: new data takes a few minutes to reach the workspace, longer the first time a VM starts sending.
 
 ### Video: Grafana Login with Microsoft Entra ID
 
