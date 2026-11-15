@@ -114,8 +114,7 @@ Put the output in `.env` and uncomment the lines:
 
 - **Identity**: the same service principal. Monitoring Reader covers KQL queries on a Log Analytics workspace in its resource group. If the workspace is in another resource group, add a role assignment there.
 - **Data source**: the same Azure Monitor data source as the VMs video; Logs queries pick the workspace in the query editor.
-- **Custom table sender**: the Logs Ingestion API sender doesn't use Grafana's service principal. It needs its own identity with **Monitoring Metrics Publisher** on the data collection rule, and the `DCE_LOGS_URL` and `DCR_ID` values in `.env`.
-- **No rows at first**: new data takes a few minutes to arrive, and a new custom table can take longer the first time.
+- **No rows at first**: new data takes a few minutes to reach the workspace, longer the first time a VM starts sending.
 
 ### Video: Grafana Login with Microsoft Entra ID
 
